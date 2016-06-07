@@ -16,7 +16,7 @@
  */
  
 #define SCREEN_SIZE_X 1000
-#define SCREEN_SIZE_Y 500
+#define SCREEN_SIZE_Y 700
 #define BG_R 1.0
 #define BG_G 1.0
 #define BG_B 1.0
