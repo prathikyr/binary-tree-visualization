@@ -16,6 +16,7 @@
  */
  
 #include<stdio.h>
+#include<ctype.h>
 #include<math.h>
 #include<string.h>
 #include<GL/glut.h>
@@ -26,6 +27,133 @@ float offset = 0.0;
 
 // Integer color code for RGB
 enum color_code {RED, GREEN, BLUE};
+
+//Function to count digits in numbers
+int count_digit(int n){
+	return (n==0)?0:floor(log10(n)+1);
+}
+
+//Function which converts a given number into a string
+void to_string(char *s, int num){
+	int r, d = count_digit(num);
+	s[d]='\0';
+	while(num!=0){
+		r = num%10;
+		s[--d] = r+'0';
+		num/=10;
+	}
+}
+/*
+ * =============================================================================
+ *
+ * A class which is the blueprint of the binary search tree. 
+ * It has methods to perform the operation of insert search and delete
+ *
+ * =============================================================================
+ */
+ 
+class binary_search_tree {
+
+	private:
+		NODE root;
+		int root_centre_x, root_centre_y;
+		int node_width;
+		float node_color[3];
+		float line_color[3];
+		
+	public:
+	
+		// Constructor used to initialize all the properties of the tree
+		binary_search_tree(){
+			root = NULL;
+			root_centre_x = 500;
+			root_centre_y = 500;
+			node_width = 30;
+			node_color[RED] = 0.1;
+			node_color[GREEN] = 0.0;
+			node_color[BLUE] = 0.0;
+			line_color[RED] = 0.0;
+			line_color[GREEN] = 0.7;
+			line_color[BLUE] = 0.0;
+		}
+		
+		// method to display the data on the node
+		void display_value(char s[], float x, float y, float z = 0.0){
+			glColor3f(1.0, 1.0, 0.0);
+			glRasterPos3f(x, y, z);
+			for(int i=0; s[i]; i++)
+				glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, s[i]);
+			glFlush();
+		}
+		
+		// method used to draw a node and put the value at the given co-ordinate
+		void draw_node(int item, int centre_x, int centre_y){
+			char data_string[10];
+			glColor3f(node_color[RED], node_color[GREEN], node_color[BLUE]);
+			glBegin(GL_POLYGON);
+				glVertex2f(centre_x + node_width, centre_y + node_width);
+				glVertex2f(centre_x - node_width, centre_y + node_width);
+				glVertex2f(centre_x - node_width, centre_y - node_width);
+				glVertex2f(centre_x + node_width, centre_y - node_width);
+			glEnd();
+			to_string(data_string, item);
+			display_value(data_string, centre_x - node_width + 10, centre_y);
+		}
+		
+		// method used to draw a line between a parent and a child
+		void draw_arrow(int par_x, int par_y, int node_x, int node_y){
+			glColor3f(line_color[RED], line_color[GREEN], line_color[BLUE]);
+			glBegin(GL_LINES);
+				glVertex2f(par_x, par_y - node_width);
+				glVertex2f(node_x, node_y + node_width);
+			glEnd();
+		}
+		
+		// method used to insert an element into the tree and call the draw_node method
+		NODE insert(){
+			int item, num_of_nodes = 1;
+			int node_x = root_centre_x, node_y = root_centre_y;
+			int par_x, par_y;
+			NODE temp, par = NULL, new_node;
+			printf("Item to insert -> ");
+			scanf("%d", &item);
+			if(root == NULL){
+				root = (NODE)malloc(sizeof(struct node));
+				root->data = item;
+				root->left = root->right = NULL;
+				draw_node(item, node_x, node_y);
+				return root;
+			}	
+			temp = root;
+			while(temp != NULL){
+				num_of_nodes *= 2;
+				par_x = node_x;
+				par_y = node_y;
+				node_y -= 100;
+				par = temp;
+				if(item < temp->data) {
+					temp = temp->left;	
+					node_x -= root_centre_x/num_of_nodes;			
+				}
+				else {
+					temp = temp->right;
+					node_x += root_centre_x/num_of_nodes;
+				}		
+			}
+			new_node = (NODE)malloc(sizeof(struct node));
+			new_node->data = item;
+			new_node->left = new_node->right = NULL;
+			if(item < par->data)
+				par->left = new_node;			
+			else
+				par->right = new_node;
+			draw_node(item, node_x, node_y);
+			draw_arrow(par_x, par_y, node_x, node_y);
+			return root;
+		}
+};
+ 
+binary_search_tree tree;
 
 /*
  * =============================================================================
@@ -173,8 +301,11 @@ void display() {
 void mouse(int button, int state, int x, int y){
 	y = SCREEN_SIZE_Y - y;
 	if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
-		if(insert_box.clicked(x, y))
+		if(insert_box.clicked(x, y)){
 			printf("Insert\n");
+			tree.insert();
+			glFlush();
+		}
 		if(search_box.clicked(x, y))
 			printf("Search\n");
 		if(delete_box.clicked(x, y))
