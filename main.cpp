@@ -41,11 +41,24 @@ class option_box {
 
 	private:
 		float bottom_corner_x, bottom_corner_y;
+		float bc;
 		float height, width; 
 		float color[3];
 		char option_name[20];
 		
 	public:
+	
+		// Empty Constructor
+		option_box(){
+			bottom_corner_x = 0;
+			bottom_corner_y = 0;
+			width = 0;
+			height = 0;
+			color[RED] = 0.0;
+			color[GREEN] = 0.0;
+			color[BLUE] = 1.0;
+			strcpy(option_name, "");
+		}
 	
 		// Constructor used to initialize all the properties of the option box
 		option_box(const char name[]){
@@ -71,6 +84,7 @@ class option_box {
 		// method used to draw the option box and call the display_name method
 		void draw_box(){
 			bottom_corner_x += offset;
+			bc = bottom_corner_x;
 			glColor3f(color[RED], color[GREEN], color[BLUE]);
 			glBegin(GL_POLYGON);
 				glVertex2f(bottom_corner_x, bottom_corner_y);
@@ -81,8 +95,17 @@ class option_box {
 			offset += 120.0;
 			display_name(option_name, bottom_corner_x + 10.0, bottom_corner_y + 20.0);
 		}
+		
+		// A function to check whether mouse was clicked on this box given the co-ordinates
+		bool clicked(int x, int y){
+			if( x > bc && x < bc + width)
+				if( y > bottom_corner_y && y < bottom_corner_y + height)
+					return true;
+			return false;
+		}
 };
  
+option_box insert_box, search_box, delete_box; 
   
 /*
  * =============================================================================
@@ -116,6 +139,9 @@ void init() {
 	insert_box.draw_box();
 	search_box.draw_box();
 	delete_box.draw_box();
+	::insert_box = insert_box;
+	::search_box = search_box;
+	::delete_box = delete_box;
  }
 
 /*
@@ -130,8 +156,31 @@ void init() {
 void display() {
 	glClear(GL_COLOR_BUFFER_BIT);
 	displayOptions();
-	
 	glFlush();
+}
+ 
+ 
+/*
+ * =============================================================================
+ *
+ * A mouse call back function used to get the co-ordinates of a mouse click
+ * This callback is used to check on which option the user has clicked and calls
+ * the corresponding function accordingly
+ *
+ * =============================================================================
+ */
+ 
+void mouse(int button, int state, int x, int y){
+	y = SCREEN_SIZE_Y - y;
+	if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
+		if(insert_box.clicked(x, y))
+			printf("Insert\n");
+		if(search_box.clicked(x, y))
+			printf("Search\n");
+		if(delete_box.clicked(x, y))
+			printf("Delete\n");
+	}
+		
 }
  
  
@@ -153,6 +202,7 @@ int main(int argc,char **argv) {
 	glutCreateWindow("Binary Search Tree");
 	glutDisplayFunc(display);
 	//glutKeyboardFunc(key);
+	glutMouseFunc(mouse);
 	init();
 	glutMainLoop();
 	return 0;
