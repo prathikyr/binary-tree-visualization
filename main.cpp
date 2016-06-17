@@ -28,6 +28,9 @@ float offset = 0.0;
 // A variable used to check whether input is given after an option has been selected
 bool box_clicked = false;
 
+//Variables used to store the previously searched item in order to clear the search
+int temp_x, temp_y, temp_item;
+bool prev_search = false;
 
 // Integer color code for RGB
 enum color_code {RED, GREEN, BLUE};
@@ -94,7 +97,6 @@ class binary_search_tree {
 		NODE root;
 		int root_centre_x, root_centre_y;
 		int node_width;
-		float node_color[3];
 		float line_color[3];
 		
 	public:
@@ -105,9 +107,6 @@ class binary_search_tree {
 			root_centre_x = 500;
 			root_centre_y = 500;
 			node_width = 30;
-			node_color[RED] = 0.1;
-			node_color[GREEN] = 0.0;
-			node_color[BLUE] = 0.0;
 			line_color[RED] = 0.0;
 			line_color[GREEN] = 0.7;
 			line_color[BLUE] = 0.0;
@@ -116,7 +115,6 @@ class binary_search_tree {
 		// method used to draw a node and put the value at the given co-ordinate
 		void draw_node(int item, int centre_x, int centre_y){
 			char data_string[10];
-			glColor3f(node_color[RED], node_color[GREEN], node_color[BLUE]);
 			glBegin(GL_POLYGON);
 				glVertex2f(centre_x + node_width, centre_y + node_width);
 				glVertex2f(centre_x - node_width, centre_y + node_width);
@@ -143,11 +141,15 @@ class binary_search_tree {
 			int node_x = root_centre_x, node_y = root_centre_y;
 			int par_x, par_y;
 			NODE temp, par = NULL, new_node;
-			printf("%d\n", item);
 			if(root == NULL){
 				root = (NODE)malloc(sizeof(struct node));
+				if(root == NULL){
+					printf("There was an error in creating the node\n");
+					return NULL;
+				}
 				root->data = item;
 				root->left = root->right = NULL;
+				glColor3f(node_color[RED], node_color[GREEN], node_color[BLUE]);
 				draw_node(item, node_x, node_y);
 				return root;
 			}	
@@ -168,12 +170,17 @@ class binary_search_tree {
 				}		
 			}
 			new_node = (NODE)malloc(sizeof(struct node));
+			if(new_node == NULL){
+					printf("There was an error in creating the node\n");
+					return NULL;
+				}
 			new_node->data = item;
 			new_node->left = new_node->right = NULL;
 			if(item < par->data)
 				par->left = new_node;			
 			else
 				par->right = new_node;
+			glColor3f(node_color[RED], node_color[GREEN], node_color[BLUE]);
 			draw_node(item, node_x, node_y);
 			draw_arrow(par_x, par_y, node_x, node_y);
 			glFlush();
@@ -181,9 +188,48 @@ class binary_search_tree {
 		}
 		
 		
-		//Method used to search for a given value in the node
+		// Method used to search for the first node with a given value in the tree
 		NODE search(int item){
-			printf("Item to search = %d\n", item);
+			int num_of_nodes = 1;
+			int node_x = root_centre_x, node_y = root_centre_y;
+			int par_x, par_y;
+			NODE temp, par = NULL, new_node;
+			if(root == NULL){
+				glColor3f(1.0, 0.0, 0.0);
+				display_string(not_found, 100, 600);
+				return root;
+			}	
+			temp = root;
+			while(temp != NULL){
+				num_of_nodes *= 2;
+				par_x = node_x;
+				par_y = node_y;
+				par = temp;
+				if(item == temp->data){
+					prev_search = true;
+					temp_x = node_x;
+					temp_y = node_y;
+					temp_item = item;
+					glColor3f(1.0, 0.0, 0.0);
+					draw_node(item, node_x, node_y);
+					glFlush();
+					return temp;
+				}
+				else if(item < temp->data) {
+					temp = temp->left;	
+					node_y -= 100;
+					node_x -= root_centre_x/num_of_nodes;			
+				}
+				else {
+					temp = temp->right;
+					node_y -= 100;
+					node_x += root_centre_x/num_of_nodes;
+				}		
+			}
+			glColor3f(1.0, 0.0, 0.0);
+			display_string(not_found, 100, 600);
+			glFlush();
+			return root;
 		}
 		
 		//Method used to delete all the nodes with the given value
@@ -339,17 +385,25 @@ void display() {
  
 void mouse(int button, int state, int x, int y){
 	y = SCREEN_SIZE_Y - y;
-	printf("%d %d\n", x, y);
 	if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
+		if(prev_search == true){
+			glColor3f(node_color[RED], node_color[GREEN], node_color[BLUE]);
+			tree.draw_node(temp_item, temp_x, temp_y);
+			prev_search = false;
+		}
 		if(insert_box.clicked(x, y)){
 			operation = &binary_search_tree::insert;
-			printf("Insert\n");
+			clear_input_region();
 			glColor3f(1.0, 0.0, 0.0);
-			display_string(insert_string, 100, 600);
+			display_string(query_string, 100, 600);
 			glFlush();
 		}
 		if(search_box.clicked(x, y)){
 			operation = &binary_search_tree::search;
+			clear_input_region();
+			glColor3f(1.0, 0.0, 0.0);
+			display_string(query_string, 100, 600);
+			glFlush();
 			//tree.search();
 		}
 		if(delete_box.clicked(x, y)){
@@ -399,10 +453,10 @@ void keyboard(unsigned char key, int x, int y){
 		;
 	else{
 		digit = 0;
+		clear_input_region();
 		(tree.*operation)(sign*number);
 		number = 0;
 		sign = 1;
-		clear_input_region();
 		box_clicked = false;
 	}
 }
