@@ -25,24 +25,60 @@
 // A variable used to establish a distance between two option boxes
 float offset = 0.0;
 
+// A variable used to check whether input is given after an option has been selected
+bool box_clicked = false;
+
+
 // Integer color code for RGB
 enum color_code {RED, GREEN, BLUE};
 
-//Function to count digits in numbers
+// Function to count digits in numbers
 int count_digit(int n){
 	return (n==0)?0:floor(log10(n)+1);
 }
 
-//Function which converts a given number into a string
+// Function which converts a given number into a string
 void to_string(char *s, int num){
-	int r, d = count_digit(num);
+	int r, d;
+	d = count_digit(abs(num));
+	if(num==0)
+		s[0]='0';
+	if(num<0){
+		s[0] = '-';
+		d++;
+	}
 	s[d]='\0';
+	num = abs(num);
 	while(num!=0){
 		r = num%10;
 		s[--d] = r+'0';
 		num/=10;
 	}
 }
+
+// Function to display the data on the node
+void display_string(char s[], float x, float y, float z = 0.0){
+	glRasterPos3f(x, y, z);
+	for(int i=0; s[i]; i++)
+		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, s[i]);
+	glFlush();
+}
+		
+
+// Function used to clear the input region after the input has been processed
+void clear_input_region(){
+	glColor3f(1.0, 1.0, 1.0);
+	glBegin(GL_POLYGON);
+		glVertex2f(80, 580);
+		glVertex2f(80, 650);
+		glVertex2f(580, 650);
+		glVertex2f(580, 580);
+	glEnd();
+	glFlush();
+}	
+
+	
+		
 /*
  * =============================================================================
  *
@@ -77,15 +113,6 @@ class binary_search_tree {
 			line_color[BLUE] = 0.0;
 		}
 		
-		// method to display the data on the node
-		void display_value(char s[], float x, float y, float z = 0.0){
-			glColor3f(1.0, 1.0, 0.0);
-			glRasterPos3f(x, y, z);
-			for(int i=0; s[i]; i++)
-				glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, s[i]);
-			glFlush();
-		}
-		
 		// method used to draw a node and put the value at the given co-ordinate
 		void draw_node(int item, int centre_x, int centre_y){
 			char data_string[10];
@@ -97,7 +124,8 @@ class binary_search_tree {
 				glVertex2f(centre_x + node_width, centre_y - node_width);
 			glEnd();
 			to_string(data_string, item);
-			display_value(data_string, centre_x - node_width + 10, centre_y);
+			glColor3f(1.0, 1.0, 0.0);
+			display_string(data_string, centre_x - node_width + 10, centre_y);
 		}
 		
 		// method used to draw a line between a parent and a child
@@ -110,13 +138,12 @@ class binary_search_tree {
 		}
 		
 		// method used to insert an element into the tree and call the draw_node method
-		NODE insert(){
-			int item, num_of_nodes = 1;
+		NODE insert(int item){
+			int num_of_nodes = 1;
 			int node_x = root_centre_x, node_y = root_centre_y;
 			int par_x, par_y;
 			NODE temp, par = NULL, new_node;
-			printf("Item to insert -> ");
-			scanf("%d", &item);
+			printf("%d\n", item);
 			if(root == NULL){
 				root = (NODE)malloc(sizeof(struct node));
 				root->data = item;
@@ -149,11 +176,29 @@ class binary_search_tree {
 				par->right = new_node;
 			draw_node(item, node_x, node_y);
 			draw_arrow(par_x, par_y, node_x, node_y);
+			glFlush();
 			return root;
+		}
+		
+		
+		//Method used to search for a given value in the node
+		NODE search(int item){
+			printf("Item to search = %d\n", item);
+		}
+		
+		//Method used to delete all the nodes with the given value
+		NODE remove(int item){
+			printf("Item to delete = %d\n", item);
 		}
 };
  
+ 
+//Object of class binary_search_tree which is used to manipulate the tree 
 binary_search_tree tree;
+
+
+//A member function pointer used to decide the method to be called at runtime
+NODE (binary_search_tree::*operation)(int) = NULL;
 
 /*
  * =============================================================================
@@ -200,16 +245,7 @@ class option_box {
 			strcpy(option_name, name);
 		}
 		
-		// method used to display the name of the option box  
-		void display_name(char s[], float x, float y, float z = 0.0){
-			glColor3f(1.0, 1.0, 0.0);
-			glRasterPos3f(x, y, z);
-			for(int i=0; s[i]; i++)
-				glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, s[i]);
-			glFlush();
-		}
-		
-		// method used to draw the option box and call the display_name method
+		// method used to draw the option box and call the display_string method
 		void draw_box(){
 			bottom_corner_x += offset;
 			bc = bottom_corner_x;
@@ -221,14 +257,17 @@ class option_box {
 				glVertex2f(bottom_corner_x, bottom_corner_y + height);
 			glEnd();
 			offset += 120.0;
-			display_name(option_name, bottom_corner_x + 10.0, bottom_corner_y + 20.0);
+			glColor3f(1.0, 1.0, 0.0);
+			display_string(option_name, bottom_corner_x + 10.0, bottom_corner_y + 20.0);
 		}
 		
 		// A function to check whether mouse was clicked on this box given the co-ordinates
 		bool clicked(int x, int y){
 			if( x > bc && x < bc + width)
-				if( y > bottom_corner_y && y < bottom_corner_y + height)
+				if( y > bottom_corner_y && y < bottom_corner_y + height){
+					box_clicked = true;
 					return true;
+				}
 			return false;
 		}
 };
@@ -300,20 +339,73 @@ void display() {
  
 void mouse(int button, int state, int x, int y){
 	y = SCREEN_SIZE_Y - y;
+	printf("%d %d\n", x, y);
 	if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
 		if(insert_box.clicked(x, y)){
+			operation = &binary_search_tree::insert;
 			printf("Insert\n");
-			tree.insert();
+			glColor3f(1.0, 0.0, 0.0);
+			display_string(insert_string, 100, 600);
 			glFlush();
 		}
-		if(search_box.clicked(x, y))
-			printf("Search\n");
-		if(delete_box.clicked(x, y))
-			printf("Delete\n");
+		if(search_box.clicked(x, y)){
+			operation = &binary_search_tree::search;
+			//tree.search();
+		}
+		if(delete_box.clicked(x, y)){
+			operation = &binary_search_tree::remove;
+			;//tree.delete();
+		}
 	}
 		
 }
  
+ 
+/*
+ * =============================================================================
+ *
+ * A Keyboard call back function used to get the key pressed and the co-ordinates 
+ * of the location. This callback is used to take input of the value to be inserted
+ * searched and deleted
+ *
+ * =============================================================================
+ */
+ 
+void keyboard(unsigned char key, int x, int y){
+	char s[2];
+	static int digit = 0;
+	static int number = 0;
+	static int sign = 1;
+	if(!box_clicked)
+		return ;
+	if(digit == 0 && key == '-'){
+		s[0]=key;
+		s[1]='\0';
+		glColor3f(1.0, 0.0, 0.0);
+		display_string(s, 420 + (15*digit), 600);
+		glFlush();
+		sign = -1;
+	}
+	else if(key != 13 && isdigit(key)){
+		digit++;
+		number = (number*10) + key - '0';
+		s[0]=key;
+		s[1]='\0';
+		glColor3f(1.0, 0.0, 0.0);
+		display_string(s, 420 + (15*digit), 600);
+		glFlush();
+	}
+	else if(key != 13 && !isdigit(key))
+		;
+	else{
+		digit = 0;
+		(tree.*operation)(sign*number);
+		number = 0;
+		sign = 1;
+		clear_input_region();
+		box_clicked = false;
+	}
+}
  
 /*
  * =============================================================================
@@ -332,7 +424,7 @@ int main(int argc,char **argv) {
 	glutInitWindowPosition(0,0);
 	glutCreateWindow("Binary Search Tree");
 	glutDisplayFunc(display);
-	//glutKeyboardFunc(key);
+	glutKeyboardFunc(keyboard);
 	glutMouseFunc(mouse);
 	init();
 	glutMainLoop();

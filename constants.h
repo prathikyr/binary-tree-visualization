@@ -32,3 +32,5 @@ struct node {
 typedef struct node* NODE;
 
 NODE root = NULL;
+
+char insert_string[] = "Enter an Integer and Hit Enter : ";
