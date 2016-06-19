@@ -80,8 +80,7 @@ void clear_input_region(){
 	glFlush();
 }	
 
-	
-		
+
 /*
  * =============================================================================
  *
@@ -99,6 +98,14 @@ class binary_search_tree {
 		int node_width;
 		float line_color[3];
 		
+		// Method used to get the minimum valued node in the specified subtree
+		NODE get_minimum(NODE temp, NODE *par){
+			if(temp->left == NULL)
+				return temp;
+			*par = temp;
+			return get_minimum(temp->left, par);
+		}
+		
 	public:
 	
 		// Constructor used to initialize all the properties of the tree
@@ -113,7 +120,7 @@ class binary_search_tree {
 		}
 		
 		// method used to draw a node and put the value at the given co-ordinate
-		void draw_node(int item, int centre_x, int centre_y){
+		void draw_node(int item, int centre_x, int centre_y, bool write_value = true){
 			char data_string[10];
 			glBegin(GL_POLYGON);
 				glVertex2f(centre_x + node_width, centre_y + node_width);
@@ -121,14 +128,19 @@ class binary_search_tree {
 				glVertex2f(centre_x - node_width, centre_y - node_width);
 				glVertex2f(centre_x + node_width, centre_y - node_width);
 			glEnd();
-			to_string(data_string, item);
-			glColor3f(1.0, 1.0, 0.0);
-			display_string(data_string, centre_x - node_width + 10, centre_y);
+			if(write_value){
+				to_string(data_string, item);
+				glColor3f(1.0, 1.0, 0.0);
+				display_string(data_string, centre_x - node_width + 10, centre_y);
+			}
 		}
 		
 		// method used to draw a line between a parent and a child
-		void draw_arrow(int par_x, int par_y, int node_x, int node_y){
-			glColor3f(line_color[RED], line_color[GREEN], line_color[BLUE]);
+		void draw_arrow(int par_x, int par_y, int node_x, int node_y, bool color = true){
+			if(color)
+				glColor3f(line_color[RED], line_color[GREEN], line_color[BLUE]);
+			else
+				glColor3f(BG_R, BG_G, BG_B);
 			glBegin(GL_LINES);
 				glVertex2f(par_x, par_y - node_width);
 				glVertex2f(node_x, node_y + node_width);
@@ -229,15 +241,98 @@ class binary_search_tree {
 			glColor3f(1.0, 0.0, 0.0);
 			display_string(not_found, 100, 600);
 			glFlush();
-			return root;
+			return temp;
 		}
 		
-		//Method used to delete all the nodes with the given value
+		void pre_order(NODE temp, binary_search_tree temp_tree){
+			if(temp != NULL){
+				temp_tree.insert(temp->data);
+				pre_order(temp->left, temp_tree);
+				pre_order(temp->right, temp_tree);
+			}
+		}
+		
+		void draw_tree(){
+			binary_search_tree temp_tree;
+			display();	
+			pre_order(root, temp_tree);
+		}
+		
+		// Method used to delete the first node with the given value
 		NODE remove(int item){
-			printf("Item to delete = %d\n", item);
+			bool found = false;
+			int num_of_nodes = 1;
+			int node_x = root_centre_x, node_y = root_centre_y;
+			int par_x, par_y;
+			NODE temp = root, par = root, new_node;
+			if(root == NULL){
+				glColor3f(1.0, 0.0, 0.0);
+				display_string(not_found, 100, 600);
+				return root;
+			}
+			while(temp != NULL){
+				if(item == temp->data){
+					found = true;
+					if(temp == root){
+						if(temp->left == NULL && temp->right == NULL){
+							root = NULL;
+							free(temp);
+						}
+						if(temp->left != NULL && temp->right != NULL){
+							par = temp;
+							NODE min_node = get_minimum(temp->right, &par);
+							temp->data = min_node->data;	
+							temp = min_node;
+							item = min_node->data;
+							continue;						
+						}
+						if(temp->left != NULL){
+							root = temp->left;
+							free(temp);
+						}
+						if(temp->right != NULL){
+							root = temp->right;
+							free(temp);
+						}
+					}
+					else if(temp->left == NULL && temp->right == NULL){
+						if(par->left == temp)
+							par->left = NULL;
+						else
+							par->right = NULL;
+						free(temp);
+					}
+					else if(temp->left != NULL && temp->right != NULL){
+						par = temp;
+						NODE min_node = get_minimum(temp->right, &par);
+						temp->data = min_node->data;	
+						temp = min_node;
+						item = min_node->data;
+						continue;
+					}
+					else {
+						if(temp->left != NULL)
+							(par->left == temp) ? (par->left = temp->left) : (par->right = temp->left);	
+						else 
+							(par->left == temp) ? (par->left = temp->right) : (par->right = temp->right);	
+						free(temp);
+					}	
+					break;	
+				}
+				par = temp;
+				if(item < temp->data)	
+					temp = temp->left;
+				else
+					temp = temp->right;
+			}
+			if(!found){
+				glColor3f(1.0, 0.0, 0.0);
+				display_string(not_found, 100, 600);
+			}
+			else
+				draw_tree();
 		}
 };
- 
  
 //Object of class binary_search_tree which is used to manipulate the tree 
 binary_search_tree tree;
@@ -404,11 +499,13 @@ void mouse(int button, int state, int x, int y){
 			glColor3f(1.0, 0.0, 0.0);
 			display_string(query_string, 100, 600);
 			glFlush();
-			//tree.search();
 		}
 		if(delete_box.clicked(x, y)){
 			operation = &binary_search_tree::remove;
-			;//tree.delete();
+			clear_input_region();
+			glColor3f(1.0, 0.0, 0.0);
+			display_string(query_string, 100, 600);
+			glFlush();
 		}
 	}
 		

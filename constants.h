@@ -38,3 +38,5 @@ char query_string[] = "Enter an Integer and Hit Enter : ";
 char not_found[] = "Item Not found";
 
 float node_color[3] = {0.1, 0.0, 0.0};
+
+void display();

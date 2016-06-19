@@ -3,3 +3,5 @@ Delete function
 Animation
 
 Creating a super abstract class tree and inheriting different types of trees.
+
+Add different tree data strucures like heap, AVL tree, red-black tree.
